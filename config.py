@@ -42,18 +42,23 @@ base_config = Config({
     # Training images and cropped faces
     'train_images': 'engagement-global-local/ImageData3/Train',
     'train_crop': 'engagement-global-local/ImageData3/CropTrain',
+    'train_facial': 'engagement-global-local/ImageData3/FacialTrain',
 
     # Valid images and cropped faces
     'val_images': 'engagement-global-local/ImageData3/Validation',
     'val_crop': 'engagement-global-local/ImageData3/CropValidation',
+    'val_facial': 'engagement-global-local/ImageData3/FacialValidation',
 
     # test images and cropped faces
     'test_images': 'engagement-global-local/ImageData3/Test',
     'test_crop': 'engagement-global-local/ImageData3/CropTest',
+    'test_facial': 'engagement-global-local/ImageData3/FacialTest',
 
     'face_input_size': [96, 96],
     'context_input_size': [112, 112],
-    'batch_size': 4,
+    'face_landmark_size': [196],
+    'head_pose_size' : [6],
+    'batch_size': 3,
     'num_parallel_calls' : 2,
 
     'lr': 5e-4,  # initial learning rate
