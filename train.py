@@ -45,13 +45,13 @@ def train(model, optimizer, train_dataset, val_dataset=None, epochs=5, load_chec
         print("Epoch {}".format(int(iter_count / batches_per_epoch)+1))
         pb_i = Progbar(batches_per_epoch, width=30, stateful_metrics = ['acc'])
         # one train step per loop
-        for x_context, x_face, y in train_dataset:
+        for x_context, x_face,x_face_landmark, y in train_dataset:
             checkpoint.step.assign_add(1)
             iter_count += 1
             curr_epoch = int(iter_count / batches_per_epoch)
 
             with tf.GradientTape() as tape:
-                y_pred = model(x_face, x_context, training=True)
+                y_pred = model(x_face, x_context,x_face_landmark, training=True)
                 loss = tf.keras.losses.SparseCategoricalCrossentropy()(y, y_pred)
 
                 train_loss(loss)  # update metric
@@ -76,8 +76,8 @@ def train(model, optimizer, train_dataset, val_dataset=None, epochs=5, load_chec
                 val_loss.reset_states()
                 val_accuracy.reset_states()
 
-                for x_context, x_face, y in val_dataset:
-                    y_pred = model(x_face, x_context, training=False)
+                for x_context, x_face,x_face_landmark, y in val_dataset:
+                    y_pred = model(x_face, x_context,x_face_landmark, training=False)
                     loss = tf.keras.losses.SparseCategoricalCrossentropy()(y, y_pred)
                     val_loss(loss)  # update metric
                     val_accuracy(y, y_pred)  # update metric
@@ -118,8 +118,8 @@ def eval(model, eval_dataset):
     start = time.time()
     batches_per_epoch = tf.data.experimental.cardinality(eval_dataset).numpy()
     pb = Progbar(batches_per_epoch, width=30)
-    for x_context, x_face, y in eval_dataset:
-        scores = model(x_face, x_context, training=False)
+    for x_context, x_face,x_face_landmark, y in eval_dataset:
+        scores = model(x_face, x_context,x_face_landmark, training=False)
         test_accuracy(y, scores)  # update the metric
         y_pred = tf.argmax(scores, axis=1)
         pb.add(1)
