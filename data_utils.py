@@ -6,7 +6,7 @@ import pathlib
 import dlib
 import cv2
 from tensorflow.keras.utils import Progbar
-
+import json
 
 def extract_faces(kind):
     """
@@ -86,7 +86,7 @@ def mask_face(img, bbox):  # create a mask with 0 in region of the face bbox in 
     return mask.astype(np.uint8)
 
 
-def parse_image(crop_path):  # read image from filename and load it to a tensor
+def parse_image(crop_path,facial_path):  # read image from filename and load it to a tensor
 
     def proc(filename):
         parts = tf.strings.split(filename, os.sep)
@@ -100,8 +100,12 @@ def parse_image(crop_path):  # read image from filename and load it to a tensor
         # read the pre-detected bounding box (4 number x1,y1,x2,y2) of the corresponding image
         bbox = tf.io.read_file(crop_path + "/" + parts[-2] + "/" + name + ".txt")  # read a tf strings with 1 line
         bbox = tf.strings.to_number(tf.strings.split(bbox, ","), out_type=tf.dtypes.int32)  # shape (4,)
+        
+        # read facial landmarks for that image
+        facial_data  = tf.io.read_file(facial_path + "/" + parts[-2] + "/" + name + ".txt")
+        facial_data = tf.strings.to_number(tf.strings.split(facial_data, " "), out_type=tf.dtypes.float32)  # shape (4,)
 
-        return image, bbox, label_text
+        return image, bbox, facial_data,label_text
 
     return proc
 
@@ -124,7 +128,7 @@ def image_augment(img, flip=True, rotation=True, shift=True, zoom=True, shear=Tr
 
 
 def training_preprocess(table_label):
-    def proc(image, bbox, label):
+    def proc(image, bbox, facial_data, label):
         x1, y1, x2, y2 = bbox[0], bbox[1], bbox[2], bbox[3]
         h, w = tf.shape(image)[0], tf.shape(image)[1]
         x1 = tf.clip_by_value(x1, 0, w)
@@ -158,7 +162,7 @@ def training_preprocess(table_label):
         #     image = tf.squeeze(image)
         face = tf.numpy_function(image_augment, inp=[face], Tout=[tf.float32])
         face = tf.squeeze(face)
-        return image, face, label
+        return image, face,facial_data, label
 
     return proc
 
@@ -174,7 +178,7 @@ def get_train_dataset():
     ds_root = pathlib.Path(config.train_images)
     list_ds = tf.data.Dataset.list_files(str(ds_root / '*/*'))
     labeled_ds = list_ds.map(
-        parse_image(config.train_crop))  # map each image  filenames to 3 tensors image, bbox and label_text
+        parse_image(config.train_crop,config.train_facial))  # map each image  filenames to 3 tensors image, bbox and label_text
     dataset = labeled_ds.map(training_preprocess(table_label),
                              num_parallel_calls=config.num_parallel_calls)  # map image,bbox, label to image, face, label
     dataset = dataset.batch(config.batch_size).prefetch(
@@ -182,7 +186,7 @@ def get_train_dataset():
     return dataset
 
 
-def parse_image_test(crop_path):  # read image from filename and load it to a tensor
+def parse_image_test(crop_path,facial_path):  # read image from filename and load it to a tensor
 
     def proc(filename):
         parts = tf.strings.split(filename, os.sep)
@@ -194,13 +198,18 @@ def parse_image_test(crop_path):  # read image from filename and load it to a te
 
         bbox = tf.io.read_file(crop_path + "/" + parts[-2] + "/" + name + ".txt")  # read a tf strings with 1 line
         bbox = tf.strings.to_number(tf.strings.split(bbox, ","), out_type=tf.dtypes.int32)  # shape (4,)
-        return image, bbox, label_text
+     
+        # read facial landmarks for that image
+        facial_data  = tf.io.read_file(facial_path + "/" + parts[-2] + "/" + name + ".txt")
+        facial_data = tf.strings.to_number(tf.strings.split(facial_data, " "), out_type=tf.dtypes.float32)  # shape (4,)
+
+        return image, bbox, facial_data,label_text
 
     return proc
 
 
 def testing_preprocess(table_label_test):
-    def proc(image, bbox, label):
+    def proc(image, bbox,facial_data, label):
         x1, y1, x2, y2 = bbox[0], bbox[1], bbox[2], bbox[3]
         h, w = tf.shape(image)[0], tf.shape(image)[1]
         x1 = tf.clip_by_value(x1, 0, w)
@@ -229,7 +238,7 @@ def testing_preprocess(table_label_test):
         image = tf.image.resize(image, [128, 171])
         image = image[8:120, 29:141:]
         label = table_label_test.lookup(label)
-        return image, face, label
+        return image, face,facial_data, label
     return proc
 
 def get_eval_dataset(kind='test'):
@@ -244,18 +253,21 @@ def get_eval_dataset(kind='test'):
     if kind == 'train':
         image_path = config.train_images
         crop_path = config.train_crop
+        facial_path = config.train_facial
     elif kind == 'test':
         image_path = config.test_images
         crop_path = config.test_crop
+        facial_path = config.test_facial
     elif kind == 'val':
         image_path = config.val_images
         crop_path = config.val_crop
+        facial_path = config.val_facial
     else:
         raise ValueError('Wrong type of dataset ("train". "val" or "test" is acceptable)')
 
     ds_root = pathlib.Path(image_path)
     list_ds_test = tf.data.Dataset.list_files(str(ds_root / "*/*"))
-    dataset_test = list_ds_test.map(parse_image_test(crop_path))
+    dataset_test = list_ds_test.map(parse_image_test(crop_path,facial_path))
     dataset_test = dataset_test.map(testing_preprocess(table_label_test), num_parallel_calls=config.num_parallel_calls)
     dataset_test = dataset_test.batch(config.batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 
