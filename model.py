@@ -55,7 +55,9 @@ class GLAMORNet(tf.keras.Model):
                                               pooling=config.context_encoding.pooling)
 
         self.FaceReduction = tf.keras.layers.GlobalAveragePooling2D()  # convert the encoded face tensor to a single vector
-
+        self.face_landmark_fc = tf.keras.layers.Dense(units=128, activation='relu')
+        self.head_pose_fc = tf.keras.layers.Dense(units=128, activation='relu')
+        
         # GLA module
         self.attention_fc1 = tf.keras.layers.Dense(units=128, activation='relu')
         self.attention_fc1_bn = tf.keras.layers.BatchNormalization()
@@ -67,6 +69,11 @@ class GLAMORNet(tf.keras.Model):
         self.face_weight2 = tf.keras.layers.Dense(units=1, activation=None)
         self.context_weight1 = tf.keras.layers.Dense(units=128, activation='relu')
         self.context_weight2 = tf.keras.layers.Dense(units=1, activation=None)
+        self.face_landmark_weight1 = tf.keras.layers.Dense(units=128, activation='relu')
+        self.face_landmark_weight2 = tf.keras.layers.Dense(units=1, activation=None)
+        self.head_pose_weight1 = tf.keras.layers.Dense(units=128, activation='relu')
+        self.head_pose_weight2 = tf.keras.layers.Dense(units=1, activation=None)
+        
         self.concat1 = tf.keras.layers.Concatenate(axis=-1)
         self.softmax1 = tf.keras.layers.Activation('softmax')
 
@@ -75,7 +82,9 @@ class GLAMORNet(tf.keras.Model):
         self.final_dropout1 = tf.keras.layers.Dropout(rate=config.dropout_rate)
         self.final_classify = tf.keras.layers.Dense(units=num_classes, activation='softmax')
 
-    def call(self, x_face, x_context, training=False):
+    def call(self, x_face, x_context,face_data_vector, training=False):
+        face_landmark_vector = face_data_vector[:,:-6] 
+        head_pose_vector = face_data_vector[:,-6:]
         face = self.FaceEncodingNet(x_face, training=training)  # Get face encoding volume with shape (W,H,C)
         context = self.ContextEncodingNet(x_context, training=training)
         face_vector = self.FaceReduction(face)  # dim [1xC]
@@ -97,19 +106,30 @@ class GLAMORNet(tf.keras.Model):
         context_vector = tf.keras.layers.Reshape((C,))(
             context_vector)  # final context representation (output of the GLA module)
 
+        # Process face landmark and head pose vectors
+        face_landmark_vector = self.face_landmark_fc(face_landmark_vector)
+        head_pose_vector = self.head_pose_fc(head_pose_vector)
+
+
         w_f = self.face_weight1(face_vector)
         w_f = self.face_weight2(w_f)
         w_c = self.context_weight1(context_vector)
         w_c = self.context_weight2(w_c)
+        w_fl = self.face_landmark_weight1(face_landmark_vector)
+        w_fl = self.face_landmark_weight2(w_fl)
+        w_hp = self.head_pose_weight1(head_pose_vector)
+        w_hp = self.head_pose_weight2(w_hp)        
 
-        w_fc = self.concat1([w_f, w_c])
-        w_fc = self.softmax1(w_fc)
+        w_fclp = self.concat1([w_f, w_c,w_fl,w_hp])
+        w_fclp = self.softmax1(w_fclp)
 
-        face_vector = face_vector * tf.expand_dims(w_fc[:, 0], axis=-1)
-        context_vector = context_vector * tf.expand_dims(w_fc[:, 1], axis=-1)
+        face_vector = face_vector * tf.expand_dims(w_fclp[:, 0], axis=-1)
+        context_vector = context_vector * tf.expand_dims(w_fclp[:, 1], axis=-1)
+        face_landmark_vector =  face_landmark_vector * tf.expand_dims(w_fclp[:, 2], axis=-1)
+        head_pose_vector =  head_pose_vector * tf.expand_dims(w_fclp[:, 3], axis=-1)
 
         # concat2 = context_vector
-        concat2 = tf.keras.layers.Concatenate(axis=-1)([face_vector, context_vector])
+        concat2 = tf.keras.layers.Concatenate(axis=-1)([face_vector, context_vector,face_landmark_vector,head_pose_vector])
         features = self.final_fc1(concat2)
         features = self.final_dropout1(features, training=training)
         scores = self.final_classify(features)
@@ -123,13 +143,14 @@ def get_model():
     return model
 
 if __name__ == '__main__':
-    a = tf.random.normal([2, 96, 96, 3])
-    b = tf.random.normal([2, 112, 112, 3])
+    a = tf.random.normal([3, 96, 96, 3])
+    b = tf.random.normal([3, 112, 112, 3])
+    c = tf.random.normal([3,202])
     print(config.train_images)
     model = get_model()
 
 
-    model.call(tf.keras.Input((96, 96, 3)), tf.keras.Input((112, 112, 3)))
-    o = model(a, b, True)
+    model.call(tf.keras.Input((96, 96, 3)), tf.keras.Input((112, 112, 3)),tf.keras.Input((202)))
+    o = model(a, b,c, True)
     print(model.summary())
     print(o.shape)
