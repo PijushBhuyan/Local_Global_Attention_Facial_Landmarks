@@ -3,7 +3,7 @@ import numpy as np
 from config import config
 import os
 import pathlib
-import dlib
+# import dlib
 import cv2
 from tensorflow.keras.utils import Progbar
 import json
@@ -112,10 +112,10 @@ def parse_image(crop_path,facial_path):  # read image from filename and load it 
 
 def image_augment(img, flip=True, rotation=True, shift=True, zoom=True, shear=True):
     img = tf.convert_to_tensor(img, dtype=tf.float32)
-    if flip:
-        img = tf.image.random_flip_left_right(img)
-    if rotation:
-        img = tf.keras.preprocessing.image.random_rotation(img.numpy(), 20, row_axis=0, col_axis=1, channel_axis=2)
+    # if flip:
+    #     img = tf.image.random_flip_left_right(img)
+    # if rotation:
+    #     img = tf.keras.preprocessing.image.random_rotation(img.numpy(), 20, row_axis=0, col_axis=1, channel_axis=2)
     # img = tf.image.random_brightness(img, 0.05)
     #     if shift:
     #         img = tf.keras.preprocessing.image.random_shift(img,0.2,0.2, 0, 1, 2, )
@@ -276,6 +276,7 @@ def get_eval_dataset(kind='test'):
 
 
 if __name__ == '__main__':
+    print("in data utils")
     #test_dataset = get_test_dataset('val')
     # test_dataset = get_train_dataset()
     # print(tf.data.experimental.cardinality(test_dataset))
@@ -283,4 +284,4 @@ if __name__ == '__main__':
     # for a,b,y in test_dataset:
     #     res += a.shape[0]
     # print(res)
-    extract_faces("val")
+    # extract_faces("val")

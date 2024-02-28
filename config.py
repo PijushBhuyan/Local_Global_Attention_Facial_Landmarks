@@ -40,25 +40,25 @@ base_config = Config({
     'name': 'Base Config',
 
     # Training images and cropped faces
-    'train_images': 'engagement-global-local/ImageData3/Train',
-    'train_crop': 'engagement-global-local/ImageData3/CropTrain',
-    'train_facial': 'engagement-global-local/ImageData3/FacialTrain',
+    'train_images': 'content/global-local-engagement/ImageData3/Train',
+    'train_crop': 'content/global-local-engagement/ImageData3/CropTrain',
+    'train_facial': 'content/global-local-engagement/ImageData3/FacialTrain',
 
     # Valid images and cropped faces
-    'val_images': 'engagement-global-local/ImageData3/Validation',
-    'val_crop': 'engagement-global-local/ImageData3/CropValidation',
-    'val_facial': 'engagement-global-local/ImageData3/FacialValidation',
+    'val_images': 'content/global-local-engagement/ImageData3/Validation',
+    'val_crop': 'content/global-local-engagement/ImageData3/CropValidation',
+    'val_facial': 'content/global-local-engagement/ImageData3/FacialValidation',
 
     # test images and cropped faces
-    'test_images': 'engagement-global-local/ImageData3/Test',
-    'test_crop': 'engagement-global-local/ImageData3/CropTest',
-    'test_facial': 'engagement-global-local/ImageData3/FacialTest',
+    'test_images': 'content/global-local-engagement/ImageData3/Test',
+    'test_crop': 'content/global-local-engagement/ImageData3/CropTest',
+    'test_facial': 'content/global-local-engagement/ImageData3/FacialTest',
 
     'face_input_size': [96, 96],
     'context_input_size': [112, 112],
     'face_landmark_size': [196],
     'head_pose_size' : [6],
-    'batch_size': 3,
+    'batch_size': 8,
     'num_parallel_calls' : 2,
 
     'lr': 5e-4,  # initial learning rate

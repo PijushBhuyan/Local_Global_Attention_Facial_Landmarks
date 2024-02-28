@@ -6,6 +6,24 @@ import data_utils
 import time
 from data_utils import get_train_dataset
 
+import os
+import logging
+import builtins 
+
+log_dir = './logs'
+# image_dir = './images3'
+os.makedirs(log_dir, exist_ok=True)
+# os.makedirs(image_dir, exist_ok=True)
+
+log_file = os.path.join(log_dir, 'output.log')
+logging.basicConfig(filename=log_file, level=logging.INFO)
+
+# Replace print statements with logging
+def print(*args, **kwargs):
+    with open(log_file, 'a') as f:
+        kwargs['file'] = f
+        builtins.print(*args, **kwargs)
+
 def train(model, optimizer, train_dataset, val_dataset=None, epochs=5, load_checkpoint=False):
     # Define the metrics
     train_loss = tf.keras.metrics.Mean('train_loss', dtype=tf.float32)
@@ -20,7 +38,7 @@ def train(model, optimizer, train_dataset, val_dataset=None, epochs=5, load_chec
     val_interval = config.val_interval  # epoch
     save_interval = config.save_interval  # epoch
 
-    # setup checkpoints manager
+    # setup checkpoints3 manager
     checkpoint = tf.train.Checkpoint(step=tf.Variable(0), optimizer=optimizer, model=model)
     manager = tf.train.CheckpointManager(
         checkpoint, directory="./checkpoints", max_to_keep=5
